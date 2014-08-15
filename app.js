@@ -1,10 +1,20 @@
 var express = require('express');
 var fortune = require('./lib/fortune.js');
+var weather = require('./lib/weather.js');
 var app = express();
 
 
 // set up handlebars view engine
-var handlebars = require('express-handlebars').create({ defaultLayout: 'main' });
+var handlebars = require('express-handlebars').create({
+  defaultLayout: 'main',
+  helpers: {
+    section: function (name, options) {
+      if (!this._sections) this._sections = {};
+      this._sections[name] = options.fn(this);
+      return null;
+    }
+  }
+});
 app.engine('handlebars', handlebars.engine);
 app.set('view engine', 'handlebars');
 
@@ -12,12 +22,36 @@ app.set('port', process.env.PORT || 3000);
 
 app.use(express.static(__dirname + '/public'));
 
+// this middleware injects the weather data into the res.locals.partials object
+app.use(function (req, res, next) {
+  if (!res.locals.partials) res.locals.partials = {};
+  res.locals.partials.weather = weather.getWeatherData();
+  next();
+});
+
 app.get('/', function (req, res) {
   res.render('home');
 });
 
 app.get('/about', function (req, res) {
   res.render('about', { fortune: fortune.getFortune() });
+});
+
+app.get('/jquery-test', function(req, res){ 
+  res.render('jquery-test'); 
+}); 
+
+app.get('/nursery-rhyme', function (req, res) {
+  res.render('nursery-rhyme');
+});
+
+app.get('/data/nursery-rhyme', function (req, res) {
+  res.json({
+    animal: 'squirrel',
+    bodyPart: 'tail',
+    adjective: 'bushy',
+    noun: 'heck',
+  });
 });
 
 // 404 catch-all handler (middleware)
